@@ -18,10 +18,10 @@ vector<Object*> objects;
 vector<Light> lights;
 
 void initialize(){
-	objects.push_back( new Sphere(Vector3D(0, 0, 0), 20, {1,0,0}, {0,0,0, 0}, 1 ) );
+	objects.push_back( new Sphere(Vector3D(0, 0, 20), 20, {1,0,0}, {0,0,0, 0}, 1 ) );
 	objects.push_back( new Sphere(Vector3D(30, 40, 40), 20, {.3,.3,.5}, {0,0,0, 0}, 1 ) );
-
-	lights.push_back( Light(Vector3D(40, 40, 0), {.8, .8, 0}) );
+	objects.push_back( new Floor(1000, 20) );
+	lights.push_back( Light(Vector3D(20, 30, 20), {.8, .8, 0}) );
 }
 
 void capture(){
@@ -31,6 +31,11 @@ void capture(){
 	double planeDistance = 5;
 	double windowWidth = 10;
 	double windowHeight = 10;
+
+	pos.print();
+	l.print();
+	u.print();
+	r.print();
 
 	Vector3D eye = pos;
 	Vector3D right = r.multiply(windowWidth/2).multiply(-1);
@@ -323,9 +328,13 @@ void init(){
 
 
 	u = Vector3D(0, 0, 1);
-	r = Vector3D(-1/sqrt(2), 1/sqrt(2), 0);
-	l = Vector3D(-1/sqrt(2), -1/sqrt(2), 0);
-	pos = Vector3D(100, 100, 0);
+	r = Vector3D(0.422618, 0.906308, 0);
+	l = Vector3D(-0.906308, 0.422618, 0);
+	pos = Vector3D(143.633, -51.5565, 45);
+	// u = Vector3D(0, 0, 1);
+	// r = Vector3D(-1/sqrt(2), 1/sqrt(2), 0);
+	// l = Vector3D(-1/sqrt(2), -1/sqrt(2), 0);
+	// pos = Vector3D(100, 100, 0);
 
 	/************************
 	/ set-up projection here

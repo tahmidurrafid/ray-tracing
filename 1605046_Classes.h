@@ -193,3 +193,54 @@ public:
     }
 
 };
+
+class Floor : public Object{
+public:
+    Floor(double floorWidth, double tileWidth) 
+        : Object(Vector3D(-floorWidth/2, -floorWidth/2, 0), 
+            floorWidth, floorWidth, tileWidth, {0,0,0}, {0,0,0,0}, 1)
+    {}
+
+    void draw(){
+        glColor3f(1, 1, 1);
+        int x = width/length;
+        int y = width/length;
+        // glBegin(GL_QUADS);{
+        //     glVertex3f(-width/2 , -width/2 , 0);				
+        //     glVertex3f(-width/2 , width/2 , 0);				
+        //     glVertex3f(width/2 , width/2 , 0);				
+        //     glVertex3f(width/2 , -width/2 , 0);				
+        // }glEnd();
+        for(int i = 0; i < x; i++){
+            for(int j = 0; j < y; j++){
+                int white = ( (i + j) %2);
+                double minx = reference_point.x + length*i;
+                double miny = reference_point.y + length*j;
+                glColor3f( white , white, white);
+                glBegin(GL_QUADS);{
+                    glVertex3f( minx, miny , reference_point.z);				
+                    glVertex3f( minx + length, miny , reference_point.z);
+                    glVertex3f( minx + length, miny + length , reference_point.z);
+                    glVertex3f( minx, miny + length , reference_point.z);
+                }glEnd();
+            }
+        }
+    }
+
+    double intersect(Ray ray, vector<double> &cols, int level){
+        // Vector3D r0 = ray.start.add( reference_point.multiply(-1) );
+        // Vector3D rd = ray.dir;
+        // double a = 1;
+        // double b = 2*rd.dotProduct(r0);
+        // double c = r0.dotProduct(r0) - getRadius()*getRadius();
+        // double d = b*b - 4*a*c;
+
+        // for(int i = 0; i < 3; i++) cols[i] = color[i];
+        // if(d < 0){
+        //     return -1;
+        // }
+        // d = sqrt(d);
+        // return (-b - d)/(2.0*a);
+    }
+
+};
