@@ -3,7 +3,9 @@
         {
             "name": "Win32",
             "includePath": [
-                "C:/Program Files (x86)/CodeBlocks/MinGW/include/**"
+                "C:/Program Files (x86)/CodeBlocks/MinGW/include/**",
+                "${workspaceFolder}/**",
+                "${workspaceFolder}"
             ],
             "defines": [
                 "_DEBUG",

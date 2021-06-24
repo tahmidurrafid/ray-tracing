@@ -1,71 +1,70 @@
-// #include<stdio.h>
-// #include<stdlib.h>
-// #include<math.h>
-#include <windows.h>
-#include <GL/glut.h>
-#include <bits/stdc++.h>
-
-using namespace std;
-
-#define pi (2*acos(0.0))
+#include "bitmap_image.hpp"
+#include "1605046_Classes.h"
 
 double cameraHeight;
 double cameraAngle;
 int drawgrid;
 int drawaxes;
 double angle;
-
-struct point{
-	double x,y,z;
-};
-
 int stepUnit = 5;
 float stepAngle = 2;
 
-class Vector{
-public:
-	double x, y, z;
-	Vector(){
+int imageWidth = 768;
+int imageHeight = 768;
+
+Vector3D pos, u, r, l;
+
+vector<Object*> objects;
+vector<Light> lights;
+
+void initialize(){
+	objects.push_back( new Sphere(Vector3D(0, 0, 0), 20, {1,0,0}, {0,0,0, 0}, 1 ) );
+	objects.push_back( new Sphere(Vector3D(30, 40, 40), 20, {.3,.3,.5}, {0,0,0, 0}, 1 ) );
+
+	lights.push_back( Light(Vector3D(40, 40, 0), {.8, .8, 0}) );
+}
+
+void capture(){
+	bitmap_image image(imageWidth, imageHeight);
+	vector<vector< vector<int> >> img(imageHeight, vector<vector<int>>(imageWidth, vector<int>(3, 0)) );
+
+	double planeDistance = 200;
+	double windowWidth = 200;
+	double windowHeight = 200;
+
+	Vector3D eye = pos;
+	Vector3D right = r.multiply(windowWidth/2);
+	Vector3D up = u.multiply(windowHeight/2).multiply(-1);
+	Vector3D look = l.multiply(planeDistance);
+
+	Vector3D topLeft = eye.add(look).add(right).add(up);
+
+	double du = windowWidth/imageWidth;
+	double dv = windowHeight/imageHeight;
+
+	topLeft = topLeft.add(r.multiply(0.5*du)).add( u.multiply( - 0.5*dv) );
+	
+
+	for(int i = 0; i < imageHeight; i++){
+		for(int j = 0; j < imageWidth; j++){
+			image.set_pixel(j,i, img[i][j][0] ,img[i][j][1], img[i][j][2]);
+		}
 	}
-	Vector(double px, double py, double pz){
-		x = px, y = py, z = pz;
+	image.save_image("output.bmp");
+}
+
+void drawSS()
+{
+	for(int i = 0; i < (int)objects.size(); i++){
+		objects[i]->draw();
 	}
-	void copyIt(Vector a){
-		x = a.x, y = a.y, z = a.z;
+	for(int i = 0; i < (int)lights.size(); i++){
+		lights[i].draw();
 	}
 
-	Vector cross(Vector a){
-		return Vector(y*a.z - z*a.y, z*a.x - x*a.z, x*a.y - y*a.x);
-	}
-	Vector add(Vector a){
-		return Vector(x + a.x, y + a.y, z + a.z);
-	}
+	// drawHalfCircle(30 , 20, 50);
+}
 
-	Vector multiply(double val){
-		return Vector(val*x, val*y, val*z);
-	}
-
-	void shiftInDirection(Vector to, float steps){
-		x += (to.x)*steps;
-		y += (to.y)*steps;
-		z += (to.z)*steps;
-	}
-
-	void rotate(Vector per, float angle){
-		Vector t = cross(per);
-		Vector m = *this;
-		m = m.multiply(cos(angle*pi/180.0));
-		t = t.multiply(sin(angle*pi/180.0));
-		m = t.add(m);
-		copyIt(m);
-	}
-
-	void print(){
-		cout << x << " " << y << " " << z << "\n";
-	}
-};
-
-Vector pos, u, r, l;
 
 void drawAxes()
 {
@@ -111,244 +110,8 @@ void drawGrid()
 	}
 }
 
-void drawSquare(double a)
-{
-    //glColor3f(1.0,0.0,0.0);
-	glBegin(GL_QUADS);{
-		glVertex3f( a, a,2);
-		glVertex3f( a,-a,2);
-		glVertex3f(-a,-a,2);
-		glVertex3f(-a, a,2);
-	}glEnd();
-}
-
-
-void drawCircle(double radius,int segments)
-{
-    int i;
-    struct point points[100];
-    glColor3f(0.7,0.7,0.7);
-    //generate points
-    for(i=0;i<=segments;i++)
-    {
-        points[i].x=radius*cos(((double)i/(double)segments)*2*pi);
-        points[i].y=radius*sin(((double)i/(double)segments)*2*pi);
-    }
-    //draw segments using generated points
-    for(i=0;i<segments;i++)
-    {
-        glBegin(GL_LINES);
-        {
-			glVertex3f(points[i].x,points[i].y,0);
-			glVertex3f(points[i+1].x,points[i+1].y,0);
-        }
-        glEnd();
-    }
-}
-
-void drawCone(double radius,double height,int segments)
-{
-    int i;
-    double shade;
-    struct point points[100];
-    //generate points
-    for(i=0;i<=segments;i++)
-    {
-        points[i].x=radius*cos(((double)i/(double)segments)*2*pi);
-        points[i].y=radius*sin(((double)i/(double)segments)*2*pi);
-    }
-    //draw triangles using generated points
-    for(i=0;i<segments;i++)
-    {
-        //create shading effect
-        if(i<segments/2)shade=2*(double)i/(double)segments;
-        else shade=2*(1.0-(double)i/(double)segments);
-        glColor3f(shade,shade,shade);
-
-        glBegin(GL_TRIANGLES);
-        {
-            glVertex3f(0,0,height);
-			glVertex3f(points[i].x,points[i].y,0);
-			glVertex3f(points[i+1].x,points[i+1].y,0);
-        }
-        glEnd();
-    }
-}
-
-
-void drawSphere(double radius,int slices,int stacks)
-{
-	struct point points[100][100];
-	int i,j;
-	double h,r;
-	//generate points
-	for(i=0;i<=stacks;i++)
-	{
-		h=radius*sin(((double)i/(double)stacks)*(pi/2));
-		r=radius*cos(((double)i/(double)stacks)*(pi/2));
-		for(j=0;j<=slices;j++)
-		{
-			points[i][j].x=r*cos(((double)j/(double)slices)*2*pi);
-			points[i][j].y=r*sin(((double)j/(double)slices)*2*pi);
-			points[i][j].z=h;
-		}
-	}
-	//draw quads using generated points
-	for(i=0;i<stacks;i++)
-	{
-        glColor3f((double)i/(double)stacks,(double)i/(double)stacks,(double)i/(double)stacks);
-		for(j=0;j<slices;j++)
-		{
-			glBegin(GL_QUADS);{
-			    //upper hemisphere
-				glVertex3f(points[i][j].x,points[i][j].y,points[i][j].z);
-				glVertex3f(points[i][j+1].x,points[i][j+1].y,points[i][j+1].z);
-				glVertex3f(points[i+1][j+1].x,points[i+1][j+1].y,points[i+1][j+1].z);
-				glVertex3f(points[i+1][j].x,points[i+1][j].y,points[i+1][j].z);
-                //lower hemisphere
-                glVertex3f(points[i][j].x,points[i][j].y,-points[i][j].z);
-				glVertex3f(points[i][j+1].x,points[i][j+1].y,-points[i][j+1].z);
-				glVertex3f(points[i+1][j+1].x,points[i+1][j+1].y,-points[i+1][j+1].z);
-				glVertex3f(points[i+1][j].x,points[i+1][j].y,-points[i+1][j].z);
-			}glEnd();
-		}
-	}
-}
-
-void drawHalfCircle(float radius, int hSlices, int vSlices){
-	vector< vector< point > > points(hSlices+1, vector<point>(vSlices+1) );
-	for(int i = 0; i <= hSlices; i++){
-		double angle = (pi/2) * i/(double)hSlices;
-		double r = radius * cos(angle);
-		double z = radius * sin(angle);
-
-		for(int j = 0; j <= vSlices; j++){
-			angle = (2*pi) * j/(double) vSlices;
-			points[i][j].x = r * cos(angle);
-			points[i][j].y = r * sin(angle);
-			points[i][j].z = z;
-		}
-	}
-
-	for(int i = 0; i < (int)points.size() - 1; i++){
-		for(int j = 0; j < (int)points[i].size() - 1; j++){
-			int white = (j%2);
-		    glColor3f( white , white, white);
-			glBegin(GL_QUADS);{
-				glVertex3f(points[i][j].x , points[i][j].y , points[i][j].z);				
-				glVertex3f(points[i][j+1].x , points[i][j+1].y , points[i][j+1].z);				
-				glVertex3f(points[i+1][j+1].x , points[i+1][j+1].y , points[i+1][j+1].z);				
-				glVertex3f(points[i+1][j].x , points[i+1][j].y , points[i+1][j].z);				
-			}glEnd();			
-		}
-	}	
-}
-
-void drawCylinder(float radius, int height, int hSlices, int vSlices){
-	vector< vector< point > > points(hSlices+2, vector<point>(vSlices+1) );
-
-	for(int j = 0; j <= vSlices; j++){
-		angle = (2*pi) * j/(double) vSlices;
-		points[0][j].x = radius * cos(angle);
-		points[0][j].y = radius * sin(angle);
-		points[0][j].z = 0;
-	}
-
-	for(int i = 0; i <= hSlices; i++){
-		double angle = (pi/2) * i/(double)hSlices;
-		double r = 2*radius - radius * cos(angle);
-		double z = height +  radius * sin(angle);
-
-		for(int j = 0; j <= vSlices; j++){
-			angle = (2*pi) * j/(double) vSlices;
-			points[i+1][j].x = r * cos(angle);
-			points[i+1][j].y = r * sin(angle);
-			points[i+1][j].z = z;
-		}
-	}
-
-	for(int i = 0; i < (int)points.size() - 1; i++){
-		for(int j = 0; j < (int)points[i].size() - 1; j++){
-			int white = j%2;
-		    glColor3f( white , white, white);
-			glBegin(GL_QUADS);{
-				glVertex3f(points[i][j].x , points[i][j].y , points[i][j].z);				
-				glVertex3f(points[i][j+1].x , points[i][j+1].y , points[i][j+1].z);				
-				glVertex3f(points[i+1][j+1].x , points[i+1][j+1].y , points[i+1][j+1].z);				
-				glVertex3f(points[i+1][j].x , points[i+1][j].y , points[i+1][j].z);				
-			}glEnd();			
-		}
-	}
-
-}
-
-
-int figAngle = 0;
-int halfFigAngle = 0;
-int cylAngle = 0;
-int cylRotAngle = 0;
-
-int stripes = 50;
-int circleRad = 30;
-int cylRad = 15;
-int cylHeight = 70;
-int slices = 20;
-int squareSide = 70;
-int squareDist = 200;
-int bulletSize = 2;
 bool showAxes= true;
 
-vector<point> shots;
-
-void drawSS()
-{
-    glColor3f(1,0,0);
-
-	glRotatef(90, 1, 0, 0);
-
-    glPushMatrix();
-
-	glRotatef(figAngle, 0, 1, 0);
-
-	drawHalfCircle(circleRad , slices, stripes);
-	glRotatef(180, 0, 1, 0);
-
-	glRotatef(-halfFigAngle, 1, 0, 0);
-
-	drawHalfCircle(circleRad, slices, stripes);
-
-	glTranslatef(0, 0, circleRad + cylRad);
-	glRotatef(180, 0, 1, 0);
-
-	glRotatef(cylAngle, 1, 0, 0);
-	glRotatef(cylRotAngle, 0, 0, 1);
-
-	drawHalfCircle(cylRad, slices, stripes);
-	glRotatef(180, 0, 1, 0);
-	drawCylinder(cylRad, cylHeight, slices, stripes);
-
-    glPopMatrix();
-
-    glColor3f(.2,.2,.2);
-
-	glBegin(GL_QUADS);{
-		glVertex3f(-squareSide , -squareSide , -cylHeight - squareDist);
-		glVertex3f(squareSide , -squareSide , -cylHeight - squareDist);
-		glVertex3f(squareSide , squareSide , -cylHeight - squareDist);
-		glVertex3f(-squareSide , squareSide, -cylHeight - squareDist);
-	}glEnd();
-
-    glColor3f(1, 0, 0);
-	for(int i = 0; i < (int)shots.size(); i++){
-		glBegin(GL_QUADS);{
-			glVertex3f(shots[i].x + bulletSize, shots[i].y + bulletSize, shots[i].z);
-			glVertex3f(shots[i].x + bulletSize, shots[i].y -bulletSize, shots[i].z);
-			glVertex3f(shots[i].x -bulletSize, shots[i].y -bulletSize, shots[i].z);
-			glVertex3f(shots[i].x -bulletSize, shots[i].y + bulletSize, shots[i].z);
-		}glEnd();
-	}
-    glColor3f(.2,.2,.2);
-}
 
 bool inLimit(int x){
 	return x <= 45 && x >= -45;
@@ -358,64 +121,31 @@ void keyboardListener(unsigned char key, int x,int y){
 	switch(key){
 
 		case '1':
-			// drawgrid=1-drawgrid;
 			l.rotate(u, -stepAngle);			
 			r.rotate(u, -stepAngle);			
 			break;
 		case '2':
-			// drawgrid=1-drawgrid;
 			l.rotate(u, stepAngle);			
 			r.rotate(u, stepAngle);			
 			break;
 		case '3':
-			// drawgrid=1-drawgrid;
 			l.rotate(r, -stepAngle);			
 			u.rotate(r, -stepAngle);			
 			break;
 		case '4':
-			// drawgrid=1-drawgrid;
 			l.rotate(r, stepAngle);			
 			u.rotate(r, stepAngle);			
 			break;
 		case '5':
-			// drawgrid=1-drawgrid;
 			u.rotate(l, stepAngle);
 			r.rotate(l, stepAngle);
 			break;
 		case '6':
-			// drawgrid=1-drawgrid;
 			u.rotate(l, -stepAngle);
 			r.rotate(l, -stepAngle);
 			break;
-		case 'q':
-			if( figAngle < 45)
-				figAngle += stepAngle;
-			break;
-		case 'w':
-			if( figAngle > -45)
-				figAngle -= stepAngle;		
-			break;
-		case 'e':
-			if( halfFigAngle < 45)		
-				halfFigAngle += stepAngle/2;
-			break;
-		case 'r':
-			if( halfFigAngle > -45)		
-				halfFigAngle -= stepAngle/2;
-			break;
-		case 'a':
-			if( cylAngle < 45)
-				cylAngle += stepAngle/2;
-			break;
-		case 's':
-			if( cylAngle > -45)
-				cylAngle -= stepAngle/2;
-			break;
-		case 'd':
-			cylRotAngle += stepAngle/2;
-			break;
-		case 'f':
-			cylRotAngle -= stepAngle/2;
+		case '0':
+			capture();
 			break;
 		default:
 			break;
@@ -470,23 +200,9 @@ void specialKeyListener(int key, int x,int y){
 void mouseListener(int button, int state, int x, int y){	//x, y is the x-y of the screen (2D)
 	switch(button){
 		case GLUT_LEFT_BUTTON:
-			if(state == GLUT_DOWN){
-				Vector lineDir = Vector(tan( figAngle*pi/180.0 ), tan( (halfFigAngle + cylAngle)*pi/180.0 ), 1);
-				double zDist = -(cylHeight + squareDist);
-				double xDist = lineDir.x * zDist;
-				double yDist = lineDir.y * zDist;
-				if(xDist  <= squareSide && xDist >= -squareSide && yDist <= squareSide && yDist >= -squareSide){
-					point p;
-					p.x = xDist, p.y = -yDist, p.z = zDist+1;
-					shots.push_back(p);
-				}
-			}
 			break;
 
 		case GLUT_RIGHT_BUTTON:
-			if(state == GLUT_DOWN){		// 2 times?? in ONE click? -- solution is checking DOWN or UP
-				drawaxes=1-drawaxes;
-			}
 			break;
 
 		case GLUT_MIDDLE_BUTTON:
@@ -578,10 +294,10 @@ void init(){
 	glClearColor(0,0,0,0);
 
 
-	u = Vector(0, 0, 1);
-	r = Vector(-1/sqrt(2), 1/sqrt(2), 0);
-	l = Vector(-1/sqrt(2), -1/sqrt(2), 0);
-	pos = Vector(100, 100, 0);
+	u = Vector3D(0, 0, 1);
+	r = Vector3D(-1/sqrt(2), 1/sqrt(2), 0);
+	l = Vector3D(-1/sqrt(2), -1/sqrt(2), 0);
+	pos = Vector3D(100, 100, 0);
 
 	/************************
 	/ set-up projection here
@@ -609,6 +325,7 @@ int main(int argc, char **argv){
 	glutCreateWindow("My OpenGL Program");
 
 	init();
+	initialize();
 
 	glEnable(GL_DEPTH_TEST);	//enable Depth Testing
 
