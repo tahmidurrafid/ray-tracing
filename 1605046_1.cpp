@@ -26,31 +26,59 @@ void initialize(){
 
 void capture(){
 	bitmap_image image(imageWidth, imageHeight);
-	vector<vector< vector<int> >> img(imageHeight, vector<vector<int>>(imageWidth, vector<int>(3, 0)) );
+	vector<vector< vector<int> >> img(imageWidth, vector<vector<int>>(imageHeight, vector<int>(3, 0)) );
 
-	double planeDistance = 200;
-	double windowWidth = 200;
-	double windowHeight = 200;
+	double planeDistance = 5;
+	double windowWidth = 10;
+	double windowHeight = 10;
 
 	Vector3D eye = pos;
-	Vector3D right = r.multiply(windowWidth/2);
-	Vector3D up = u.multiply(windowHeight/2).multiply(-1);
+	Vector3D right = r.multiply(windowWidth/2).multiply(-1);
+	Vector3D up = u.multiply(windowHeight/2);
 	Vector3D look = l.multiply(planeDistance);
 
 	Vector3D topLeft = eye.add(look).add(right).add(up);
+
+	// topLeft.print();
+	// eye.print();
+	// l.print();
+	// r.print();
+	// u.print();
 
 	double du = windowWidth/imageWidth;
 	double dv = windowHeight/imageHeight;
 
 	topLeft = topLeft.add(r.multiply(0.5*du)).add( u.multiply( - 0.5*dv) );
-	
 
-	for(int i = 0; i < imageHeight; i++){
-		for(int j = 0; j < imageWidth; j++){
-			image.set_pixel(j,i, img[i][j][0] ,img[i][j][1], img[i][j][2]);
+	int nearest;
+	double t, tmin;
+
+	int counter = 0;
+	for(int x = 0; x < imageWidth; x++){
+		for(int y = 0; y < imageHeight; y++){
+			Vector3D cur = topLeft;
+			cur = cur.add(r.multiply(x*du)).add( u.multiply( - y*dv) );
+			Ray ray = Ray( eye, cur.add(eye.multiply(-1)).normalize() );
+			vector<double> col(3, 1);
+			double t_min = 1111111;
+			for(int i = 0; i < objects.size(); i++){
+				double t = objects[i]->intersect(ray, col, 0);
+				if(t > 0 && t < t_min){
+					t_min = t;
+					img[x][y] = {(int)(col[0]*255), (int)(col[1]*255), (int)(col[2]*255)};
+				}
+			}
+			if(t_min < 10000) counter++;
 		}
 	}
+	for(int i = 0; i < imageWidth; i++){
+		for(int j = 0; j < imageHeight; j++){
+			image.set_pixel(i,j, img[i][j][0] ,img[i][j][1], img[i][j][2]);
+		}
+	}
+
 	image.save_image("output.bmp");
+	cout << counter << "\n";
 }
 
 void drawSS()

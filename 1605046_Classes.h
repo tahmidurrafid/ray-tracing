@@ -25,6 +25,10 @@ public:
 	Vector3D cross(Vector3D a){
 		return Vector3D(y*a.z - z*a.y, z*a.x - x*a.z, x*a.y - y*a.x);
 	}
+    double dotProduct(Vector3D a){
+        return x*a.x + y*a.y + z*a.z; 
+    }
+
 	Vector3D add(Vector3D a){
 		return Vector3D(x + a.x, y + a.y, z + a.z);
 	}
@@ -48,11 +52,12 @@ public:
 		copyIt(m);
 	}
 
-    void normalize(){
+    Vector3D normalize(){
         double mul = sqrt(x*x + y*y + z*z );
         x = x/mul;
         y = y/mul;
         z = z/mul;
+        return *this;
     }
 
 	void print(){
@@ -61,6 +66,7 @@ public:
 };
 
 class Ray{
+public:
     Vector3D start;
     Vector3D dir;
     Ray(Vector3D st, Vector3D d){
@@ -68,7 +74,7 @@ class Ray{
         dir = d;
         dir.normalize();
     }
-    
+
 };
 
 
@@ -90,6 +96,10 @@ public:
 
     virtual void draw(){
         cout << "Draw method not overriddent\n";
+    }
+
+    virtual double intersect(Ray ray, vector<double> &cols, int level){
+
     }
 
     void setColor(){
@@ -165,4 +175,21 @@ public:
             }
         }	
     }
+
+    double intersect(Ray ray, vector<double> &cols, int level){
+        Vector3D r0 = ray.start.add( reference_point.multiply(-1) );
+        Vector3D rd = ray.dir;
+        double a = 1;
+        double b = 2*rd.dotProduct(r0);
+        double c = r0.dotProduct(r0) - getRadius()*getRadius();
+        double d = b*b - 4*a*c;
+
+        for(int i = 0; i < 3; i++) cols[i] = color[i];
+        if(d < 0){
+            return -1;
+        }
+        d = sqrt(d);
+        return (-b - d)/(2.0*a);
+    }
+
 };
