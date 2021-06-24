@@ -5,6 +5,7 @@
 #define pi (2*acos(0.0))
 using namespace std;
 
+enum COEFF{AMB = 0, DIFF = 1, SPEC = 2, RECUR = 3};
 
 struct point{
 	double x,y,z;
@@ -99,7 +100,7 @@ public:
     }
 
     virtual double intersect(Ray ray, vector<double> &cols, int level){
-
+        return -1;
     }
 
     void setColor(){
@@ -133,6 +134,8 @@ public:
     	}glEnd();
     }
 };
+
+vector<Light> lights;
 
 class Sphere : public Object{
 public:
@@ -184,12 +187,30 @@ public:
         double c = r0.dotProduct(r0) - getRadius()*getRadius();
         double d = b*b - 4*a*c;
 
-        for(int i = 0; i < 3; i++) cols[i] = color[i];
+        for(int i = 0; i < 3; i++) cols[i] = color[i]*coEfficients[AMB];
         if(d < 0){
             return -1;
         }
         d = sqrt(d);
-        return (-b - d)/(2.0*a);
+
+        double t = (-b - d)/(2.0*a);
+        Vector3D point = ray.start.add( ray.dir.multiply(t) );
+        Vector3D N = point.add(reference_point.multiply(-1));
+        N.normalize();
+        Vector3D V = rd;
+        for(int i = 0; i < (int)lights.size(); i++){
+            Light light = lights[i];
+            Vector3D L = point.add(light.light_pos.multiply(-1));
+            L.normalize();
+            Vector3D R = N.multiply(2 * L.dotProduct(N)).add( L );
+            R.normalize();
+            for(int j = 0; j < 3; j++){
+                cols[j] += light.color[j]*coEfficients[DIFF]*max(0.0, -L.dotProduct(N) )*color[j];
+                cols[j] += light.color[j]*coEfficients[SPEC]*max(0.0, pow(-R.dotProduct(V), shine) )*color[j];
+            }
+        }
+
+        return t;
     }
 
 };
@@ -205,12 +226,7 @@ public:
         glColor3f(1, 1, 1);
         int x = width/length;
         int y = width/length;
-        // glBegin(GL_QUADS);{
-        //     glVertex3f(-width/2 , -width/2 , 0);				
-        //     glVertex3f(-width/2 , width/2 , 0);				
-        //     glVertex3f(width/2 , width/2 , 0);				
-        //     glVertex3f(width/2 , -width/2 , 0);				
-        // }glEnd();
+
         for(int i = 0; i < x; i++){
             for(int j = 0; j < y; j++){
                 int white = ( (i + j) %2);
@@ -228,19 +244,21 @@ public:
     }
 
     double intersect(Ray ray, vector<double> &cols, int level){
-        // Vector3D r0 = ray.start.add( reference_point.multiply(-1) );
-        // Vector3D rd = ray.dir;
-        // double a = 1;
-        // double b = 2*rd.dotProduct(r0);
-        // double c = r0.dotProduct(r0) - getRadius()*getRadius();
-        // double d = b*b - 4*a*c;
-
-        // for(int i = 0; i < 3; i++) cols[i] = color[i];
-        // if(d < 0){
-        //     return -1;
-        // }
-        // d = sqrt(d);
-        // return (-b - d)/(2.0*a);
+        Vector3D r0 = ray.start;
+        Vector3D rd = ray.dir;
+        if(rd.z == reference_point.z)
+            return -1;
+        double t = - r0.z/rd.z;
+        Vector3D point = r0.add(rd.multiply(t));
+        if(point.x >= reference_point.x && point.x <= reference_point.x + width && 
+            point.y >= reference_point.y && point.y <= reference_point.y + width )
+        {
+            int u = (point.x - reference_point.x)/length;
+            int v = (point.y - reference_point.y)/length;
+            int parity = (u + v)%2;
+            cols[0] = parity, cols[1] = parity, cols[2] = parity;
+            return t;
+        }
+        return -1;
     }
-
 };

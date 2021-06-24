@@ -15,13 +15,24 @@ int imageHeight = 768;
 Vector3D pos, u, r, l;
 
 vector<Object*> objects;
-vector<Light> lights;
 
 void initialize(){
-	objects.push_back( new Sphere(Vector3D(0, 0, 20), 20, {1,0,0}, {0,0,0, 0}, 1 ) );
-	objects.push_back( new Sphere(Vector3D(30, 40, 40), 20, {.3,.3,.5}, {0,0,0, 0}, 1 ) );
 	objects.push_back( new Floor(1000, 20) );
-	lights.push_back( Light(Vector3D(20, 30, 20), {.8, .8, 0}) );
+
+	objects.push_back( new Sphere(Vector3D(40.0, 0.0, 10.0), 10.0, {0.0, 1.0, 0.0}, {0.4, 0.2, 0.2, 0.2}, 10 ) ); 
+
+	objects.push_back( new Sphere(Vector3D(-30.0, 60.0, 20.0), 20.0, {0.0, 0.0, 1.0}, {0.2, 0.2, 0.4, 0.2}, 15 ) );
+	objects.push_back( new Sphere(Vector3D(-15.0, 15.0, 45.0), 15.0, {1.0, 1.0, 0.0}, {0.4, 0.3, 0.1, 0.2}, 5 ) );
+
+
+	lights.push_back( Light(Vector3D(70.0, 70.0, 70.0), {1.0, 0.0, 0.0}) );
+	lights.push_back( Light(Vector3D(-70, 70, 70), {0.0, 0.0, 1.0}) );
+	lights.push_back( Light(Vector3D(70, -70, 70), {1, 0, 0.0}));
+	lights.push_back( Light(Vector3D(-70, -70, 70), {0, 1.0, 0}));
+	// objects.push_back( new Sphere(Vector3D(0, 0, 20), 20, {1,0,0}, {0.4, 0.3, 0.6, 0.2}, 5 ) );
+	// objects.push_back( new Sphere(Vector3D(30, 40, 40), 20, {.3,.3,.5}, {0.6, 0.4, 0.6, 0.2}, 5 ) );
+	// objects.push_back( new Floor(1000, 20) );
+	// lights.push_back( Light(Vector3D(20, 30, 20), {.8, .8, 0}) );
 }
 
 void capture(){
@@ -55,9 +66,6 @@ void capture(){
 
 	topLeft = topLeft.add(r.multiply(0.5*du)).add( u.multiply( - 0.5*dv) );
 
-	int nearest;
-	double t, tmin;
-
 	int counter = 0;
 	for(int x = 0; x < imageWidth; x++){
 		for(int y = 0; y < imageHeight; y++){
@@ -66,7 +74,7 @@ void capture(){
 			Ray ray = Ray( eye, cur.add(eye.multiply(-1)).normalize() );
 			vector<double> col(3, 1);
 			double t_min = 1111111;
-			for(int i = 0; i < objects.size(); i++){
+			for(int i = 0; i < (int)objects.size(); i++){
 				double t = objects[i]->intersect(ray, col, 0);
 				if(t > 0 && t < t_min){
 					t_min = t;
