@@ -78,6 +78,27 @@ public:
 
 };
 
+class Light{
+public:
+    Vector3D light_pos;
+    vector<double> color;
+
+    Light(Vector3D pos, vector<double> col){
+        light_pos = pos;
+        color = col;
+    }
+
+    void draw(){
+        int a = 2;
+        glColor3f(color[0], color[1], color[2]);        
+        glBegin(GL_QUADS);{
+            glVertex3f( light_pos.x + a, light_pos.y + a, light_pos.z+2);
+            glVertex3f( light_pos.x + a,light_pos.y-a,light_pos.z+2);
+            glVertex3f( light_pos.x -a,light_pos.y-a,light_pos.z+2);
+            glVertex3f( light_pos.x -a,light_pos.y+a,light_pos.z+2);
+    	}glEnd();
+    }
+};
 
 class Object{
 public:
@@ -103,6 +124,8 @@ public:
         return -1;
     }
 
+    void calculateColor(Vector3D point, Vector3D V, Vector3D N, vector<double> &cols, vector<double> color,int level);
+
     void setColor(){
     }
 
@@ -113,29 +136,48 @@ public:
     }
 };
 
-class Light{
-public:
-    Vector3D light_pos;
-    vector<double> color;
-
-    Light(Vector3D pos, vector<double> col){
-        light_pos = pos;
-        color = col;
-    }
-
-    void draw(){
-        int a = 2;
-        glColor3f(color[0], color[1], color[2]);        
-        glBegin(GL_QUADS);{
-            glVertex3f( light_pos.x + a, light_pos.y + a, light_pos.z+2);
-            glVertex3f( light_pos.x + a,light_pos.y-a,light_pos.z+2);
-            glVertex3f( light_pos.x -a,light_pos.y-a,light_pos.z+2);
-            glVertex3f( light_pos.x -a,light_pos.y+a,light_pos.z+2);
-    	}glEnd();
-    }
-};
 
 vector<Light> lights;
+vector<Object*> objects;
+
+void Object::calculateColor(Vector3D point, Vector3D V, Vector3D N, vector<double> &cols,vector<double> color, int level){
+    for(int i = 0; i < 3; i++) cols[i] = color[i]*coEfficients[AMB];
+
+    for(int i = 0; i < (int)lights.size(); i++){
+        Light light = lights[i];
+        Vector3D L = point.add(light.light_pos.multiply(-1));
+        L.normalize();
+        Vector3D R = N.multiply( - 2 * L.dotProduct(N)).add( L );
+        R.normalize();
+        for(int j = 0; j < 3; j++){
+            cols[j] += light.color[j]*coEfficients[DIFF]*max(0.0, -L.dotProduct(N) )*color[j];
+            cols[j] += light.color[j]*coEfficients[SPEC]*max(pow( -R.dotProduct(V), shine ), 0.0)*color[j];
+        }
+    }
+
+    Vector3D recurDir = N.multiply( -2* N.dotProduct(V) ).add(V).normalize();
+
+    Ray recur = Ray(point.add(recurDir.multiply(.001)), recurDir );
+    // Ray recur = Ray(point , recurDir );
+
+    vector<double> reColor(3, 0);
+    vector<double> colorReflected;
+    double t_min = 111111;
+
+    for(int i = 0; i < (int)objects.size(); i++){
+        double t = objects[i]->intersect(recur, reColor, level - 1);
+        if(t > 0 && t < t_min){
+            t_min = t;
+            colorReflected = reColor;
+        }
+    }
+    if(t_min < 10000){
+        for(int i = 0; i < 3; i++){
+            cols[i] += colorReflected[i] * coEfficients[RECUR];
+        }
+    }
+}
+
 
 class Sphere : public Object{
 public:
@@ -186,30 +228,23 @@ public:
         double b = 2*rd.dotProduct(r0);
         double c = r0.dotProduct(r0) - getRadius()*getRadius();
         double d = b*b - 4*a*c;
-
-        for(int i = 0; i < 3; i++) cols[i] = color[i]*coEfficients[AMB];
+        for(int i = 0; i < 3; i++) cols[i] = 0;
         if(d < 0){
             return -1;
         }
         d = sqrt(d);
 
         double t = (-b - d)/(2.0*a);
+        if(level == 0){
+            return t;
+        }
         Vector3D point = ray.start.add( ray.dir.multiply(t) );
         Vector3D N = point.add(reference_point.multiply(-1));
         N.normalize();
         Vector3D V = rd;
-        for(int i = 0; i < (int)lights.size(); i++){
-            Light light = lights[i];
-            Vector3D L = point.add(light.light_pos.multiply(-1));
-            L.normalize();
-            Vector3D R = N.multiply(2 * L.dotProduct(N)).add( L );
-            R.normalize();
-            for(int j = 0; j < 3; j++){
-                cols[j] += light.color[j]*coEfficients[DIFF]*max(0.0, -L.dotProduct(N) )*color[j];
-                cols[j] += light.color[j]*coEfficients[SPEC]*max(0.0, pow(-R.dotProduct(V), shine) )*color[j];
-            }
-        }
 
+        calculateColor(point, V, N, cols, color,level);
+        
         return t;
     }
 
@@ -219,7 +254,7 @@ class Floor : public Object{
 public:
     Floor(double floorWidth, double tileWidth) 
         : Object(Vector3D(-floorWidth/2, -floorWidth/2, 0), 
-            floorWidth, floorWidth, tileWidth, {0,0,0}, {0,0,0,0}, 1)
+            floorWidth, floorWidth, tileWidth, {0,0,0}, {.5,.2, .2, .2}, 10)
     {}
 
     void draw(){
@@ -256,9 +291,66 @@ public:
             int u = (point.x - reference_point.x)/length;
             int v = (point.y - reference_point.y)/length;
             int parity = (u + v)%2;
-            cols[0] = parity, cols[1] = parity, cols[2] = parity;
+            vector<double> color = {(double)parity, (double)parity, (double)parity};
+            if(level == 0)
+                return t;
+
+            Vector3D N = Vector3D(0, 0, 1);
+            N.normalize();
+            Vector3D V = rd;
+            calculateColor(point, V, N, cols, color, level );
             return t;
         }
         return -1;
+    }
+};
+
+class Triangle : public Object{
+public:
+
+    vector<Vector3D> points;
+
+    Triangle(vector<Vector3D> p, vector<double> col, vector<double> coeff, double sh) 
+        : Object(Vector3D(0, 0, 0), 
+            0, 0, 0, col, coeff, sh)
+    {
+        points = p;
+    }
+
+    void draw(){
+        glColor3f( color[0] ,  color[1],  color[2]);
+        glBegin(GL_TRIANGLES);
+        {
+            for(int i = 0; i < 3; i++){
+                glVertex3f(points[i].x, points[i].y , points[i].z);                
+            }
+        }glEnd();
+    }
+
+    double intersect(Ray ray, vector<double> &cols, int level){
+        return -1;
+        // Vector3D r0 = ray.start;
+        // Vector3D rd = ray.dir;
+        // if(rd.z == reference_point.z)
+        //     return -1;
+        // double t = - r0.z/rd.z;
+        // Vector3D point = r0.add(rd.multiply(t));
+        // if(point.x >= reference_point.x && point.x <= reference_point.x + width && 
+        //     point.y >= reference_point.y && point.y <= reference_point.y + width )
+        // {
+        //     int u = (point.x - reference_point.x)/length;
+        //     int v = (point.y - reference_point.y)/length;
+        //     int parity = (u + v)%2;
+        //     vector<double> color = {(double)parity, (double)parity, (double)parity};
+        //     if(level == 0)
+        //         return t;
+
+        //     Vector3D N = Vector3D(0, 0, 1);
+        //     N.normalize();
+        //     Vector3D V = rd;
+        //     calculateColor(point, V, N, cols, color, level );
+        //     return t;
+        // }
+        // return -1;
     }
 };
