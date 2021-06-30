@@ -35,13 +35,17 @@ void initialize(){
 									Vector3D(50, 30, 0), Vector3D(50, 45, 50)},
 									{0.0, 0.0, 1.0}, {0.4, 0.2, 0.1, 0.3}, 5) );
 
+	objects.push_back( new Quadric(0.0625, 0.04, 0.04, 0, 0, 0, 0, 0, 0, -36, Vector3D(0, 0, 0), 
+		0 ,0 ,15, {1.0, 0.0, 0.0}, {0.4, 0.2, 0.1, 0.3}, 15 ) );
+
 	lights.push_back( Light(Vector3D(70.0, 70.0, 70.0), {1.0, 0.0, 0.0}) );
 	lights.push_back( Light(Vector3D(-70, 70, 70), {0.0, 0.0, 1.0}) );
 	lights.push_back( Light(Vector3D(70, -70, 70), {1, 0, 0.0}));
 	lights.push_back( Light(Vector3D(-70, -70, 70), {0, 1.0, 0}));
 
 
-
+	// objects.push_back( new Quadric(1, 1, 1, 0, 0, 0, -20, -20, -20, 200, Vector3D(0, 0, 0), 
+	// 	0, 0, 5, {0.0, 0.0, 1.0}, {0.4, 0.2, 0.1, 0.3}, 3 ) );
 
 	// objects.push_back( new Sphere(Vector3D(0, 0, 20), 20, {1,0,0}, {0.4, 0.3, 0.6, 0.2}, 5 ) );
 	// objects.push_back( new Sphere(Vector3D(30, 40, 40), 20, {.3,.3,.5}, {0.6, 0.4, 0.6, 0.2}, 5 ) );
@@ -77,7 +81,9 @@ void capture(){
 	int counter = 0;
 
 	cout << "Started\n";
-	vector<double> col(3, 1);	
+	auto start = chrono::high_resolution_clock::now();
+
+	double col[] = {1, 1, 1};
 	for(int x = 0; x < imageWidth; x++){
 		for(int y = 0; y < imageHeight; y++){
 			Vector3D cur = topLeft;
@@ -85,7 +91,7 @@ void capture(){
 			Ray ray = Ray( eye, cur.add(eye.multiply(-1)).normalize() );
 			double t_min = 1111111;
 			for(int i = 0; i < (int)objects.size(); i++){
-				double t = objects[i]->intersect(ray, col, 4);
+				double t = objects[i]->intersect(ray, col, 1);
 				if(t > 0 && t < t_min){
 					t_min = t;
 					for(int i = 0; i < 3; i++){
@@ -98,6 +104,9 @@ void capture(){
 		}
 	}
 	cout << "finished\n";
+	auto stop = chrono::high_resolution_clock::now();
+	auto duration = chrono::duration_cast<chrono::seconds>(stop - start);
+	cout << duration.count() << endl;	
 
 	for(int i = 0; i < imageWidth; i++){
 		for(int j = 0; j < imageHeight; j++){
