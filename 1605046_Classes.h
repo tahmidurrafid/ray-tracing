@@ -62,7 +62,10 @@ public:
         z = z/mul;
         return *this;
     }
-
+    double dist(const Vector3D & point2){
+        return sqrt((x - point2.x)*(x - point2.x) + (y - point2.y)*(y - point2.y) +
+                (z - point2.z)*(z - point2.z)) ; 
+    }
 	void print(){
 		cout << x << " " << y << " " << z << "\n";
 	}
@@ -150,9 +153,23 @@ void Object::calculateColor(Vector3D &point, Vector3D &V, Vector3D &N, double co
     for(int i = 0; i < (int)lights.size(); i++){
         Light &light = lights[i];
         // Vector3D L = point.add(light.light_pos.multiply(-1));
-        Vector3D L = Vector3D(point.x - light.light_pos.x, point.y - light.light_pos.y, 
+        Vector3D L(point.x - light.light_pos.x, point.y - light.light_pos.y, 
                     point.z - light.light_pos.z);
         L.normalize();
+        Ray r(light.light_pos, L);
+        double t = -1;
+        double dist = light.light_pos.dist(point);
+        double col2[3];
+        bool skip = false;
+        for(int j = 0; j < objects.size(); j++){
+            t = objects[j]->intersect(r, col2, 0);
+            if(t > 0 && (dist - t) >= 0.000001 ){
+                skip = true;
+            }            
+        }
+        if(skip){
+            continue;
+        }
         // Vector3D R = N.multiply( - 2 * L.dotProduct(N)).add( L );
         double dot = - 2 * L.dotProduct(N);
         Vector3D R = Vector3D(
@@ -270,7 +287,7 @@ class Floor : public Object{
 public:
     Floor(double floorWidth, double tileWidth) 
         : Object(Vector3D(-floorWidth/2, -floorWidth/2, 0), 
-            floorWidth, floorWidth, tileWidth, {0,0,0}, {.2,.5, .5, .5}, 10)
+            floorWidth, floorWidth, tileWidth, {0,0,0}, {.2,.5, .5, .2}, 10)
     {}
 
     void draw(){
@@ -491,19 +508,5 @@ public:
         calculateColor(point, V, N, cols, color,level);        
         state = 0;
         return t;
-        // if(level == 0){
-        //     return t;
-        // }
-        // Vector3D N = v1.cross(v2);
-        // if(ray.dir.dotProduct(N) > 0){
-        //     N = N.multiply(-1);
-        // }
-        // N.normalize();
-        // Vector3D V = ray.dir;
-
-        // calculateColor(point, V, N, cols, color,level);
-        
-        // return t;
-
     }
 };

@@ -11,6 +11,7 @@ float stepAngle = 2;
 
 int imageWidth = 768;
 int imageHeight = 768;
+int level;
 // int imageWidth = 200;
 // int imageHeight = 200;
 
@@ -19,38 +20,94 @@ Vector3D pos, u, r, l;
 void initialize(){
 
 	objects.push_back( new Floor(1000, 20) );
-	objects.push_back( new Sphere(Vector3D(40.0, 0.0, 10.0), 10.0, {0.0, 1.0, 0.0}, {0.4, 0.2, 0.2, 0.2}, 10 ) ); 
-	objects.push_back( new Sphere(Vector3D(-30.0, 60.0, 20.0), 20.0, {0.0, 0.0, 1.0}, {0.2, 0.2, 0.4, 0.2}, 15 ) );
-	objects.push_back( new Sphere(Vector3D(-15.0, 15.0, 45.0), 15.0, {1.0, 1.0, 0.0}, {0.4, 0.3, 0.1, 0.2}, 5 ) );
 
-	objects.push_back( new Triangle({Vector3D(50, 30, 0), 
-									Vector3D(70, 60, 0), Vector3D(50, 45, 50)},
-									{1.0, 0.0, 0.0}, {0.4, 0.2, 0.1, 0.3}, 5) );
+	int n;
+	ifstream inp;
+	inp.open("scene.txt");
+	inp >> level;
 
-	objects.push_back( new Triangle({Vector3D(70, 60, 0), 
-									Vector3D(30, 60, 0), Vector3D(50, 45, 50)},
-									{0.0, 1.0, 0.0}, {0.4, 0.2, 0.1, 0.3}, 5) );
+	inp >> imageWidth;
+	imageHeight = imageWidth;
+	inp >> n;
+	for(int i = 0; i < n; i++){
+		string figure;
+		inp >> figure;
+		if(figure == "sphere"){
+			Vector3D point;
+			double rad, shine;
+			vector<double> col(3), light(4);
+			inp >> point.x >> point.y >> point.z;
+			inp >> rad;
+			for(int j = 0; j < 3; j++) inp >> col[j];
+			for(int j = 0; j < 4; j++) inp >> light[j];
+			inp >> shine;			
+			objects.push_back( new Sphere(point, rad, col, light, shine) );
+		}else if(figure == "triangle"){
+			vector<Vector3D> points(3);
+			double shine;
+			vector<double> col(3), light(4);
+			for(int j = 0; j < 3; j++){
+				inp >> points[j].x >> points[j].y >> points[j].z ;
+			}
+			for(int j = 0; j < 3; j++) inp >> col[j];
+			for(int j = 0; j < 4; j++) inp >> light[j];
+			inp >> shine;
+			objects.push_back( new Triangle(points, col, light, shine) );
+		}else if(figure == "general"){
+			vector<double> val(10);
+			Vector3D point;
+			double shine, l, w, h;
+			vector<double> col(3), light(4);
+			for(int j = 0; j < 10; j++) inp >> val[j];
 
-	objects.push_back( new Triangle({Vector3D(30, 60, 0), 
-									Vector3D(50, 30, 0), Vector3D(50, 45, 50)},
-									{0.0, 0.0, 1.0}, {0.4, 0.2, 0.1, 0.3}, 5) );
+			inp >> point.x >> point.y >> point.z ;
+			inp >> l >> w >> h;
+			for(int j = 0; j < 3; j++) inp >> col[j];
+			for(int j = 0; j < 4; j++) inp >> light[j];
+			inp >> shine;
+			objects.push_back( new Quadric(val[0], val[1], val[2], val[3], val[4], 
+					val[5], val[6], val[7], val[8], val[9], point, l, w, h, col, light, shine) );
+		}
 
-	objects.push_back( new Quadric(0.0625, 0.04, 0.04, 0, 0, 0, 0, 0, 0, -36, Vector3D(0, 0, 0), 
-		0 ,0 ,15, {1.0, 0.0, 0.0}, {0.4, 0.2, 0.1, 0.3}, 15 ) );
+	}
 
-	lights.push_back( Light(Vector3D(70.0, 70.0, 70.0), {1.0, 0.0, 0.0}) );
-	lights.push_back( Light(Vector3D(-70, 70, 70), {0.0, 0.0, 1.0}) );
-	lights.push_back( Light(Vector3D(70, -70, 70), {1, 0, 0.0}));
-	lights.push_back( Light(Vector3D(-70, -70, 70), {0, 1.0, 0}));
+	inp >> n;
+	for(int i = 0; i < n; i++){
+		Vector3D point;
+		vector<double> col(3);
+		inp >> point.x >> point.y >> point.z;
+		for(int j = 0; j < 3; j++) inp >> col[j];
+		lights.push_back(Light(point, col));
+	}
+
+	inp.close();
 
 
-	// objects.push_back( new Quadric(1, 1, 1, 0, 0, 0, -20, -20, -20, 200, Vector3D(0, 0, 0), 
-	// 	0, 0, 5, {0.0, 0.0, 1.0}, {0.4, 0.2, 0.1, 0.3}, 3 ) );
+	// objects.push_back( new Sphere(Vector3D(40.0, 0.0, 10.0), 10.0, {0.0, 1.0, 0.0}, {0.4, 0.2, 0.2, 0.2}, 10 ) ); 
+	// objects.push_back( new Sphere(Vector3D(-30.0, 60.0, 20.0), 20.0, {0.0, 0.0, 1.0}, {0.2, 0.2, 0.4, 0.2}, 15 ) );
+	// objects.push_back( new Sphere(Vector3D(-15.0, 15.0, 45.0), 15.0, {1.0, 1.0, 0.0}, {0.4, 0.3, 0.1, 0.2}, 5 ) );
 
-	// objects.push_back( new Sphere(Vector3D(0, 0, 20), 20, {1,0,0}, {0.4, 0.3, 0.6, 0.2}, 5 ) );
-	// objects.push_back( new Sphere(Vector3D(30, 40, 40), 20, {.3,.3,.5}, {0.6, 0.4, 0.6, 0.2}, 5 ) );
-	// objects.push_back( new Floor(1000, 20) );
-	// lights.push_back( Light(Vector3D(20, 30, 20), {.8, .8, 0}) );
+	// objects.push_back( new Triangle({Vector3D(50, 30, 0), 
+	// 								Vector3D(70, 60, 0), Vector3D(50, 45, 50)},
+	// 								{1.0, 0.0, 0.0}, {0.4, 0.2, 0.1, 0.3}, 5) );
+
+	// objects.push_back( new Triangle({Vector3D(70, 60, 0), 
+	// 								Vector3D(30, 60, 0), Vector3D(50, 45, 50)},
+	// 								{0.0, 1.0, 0.0}, {0.4, 0.2, 0.1, 0.3}, 5) );
+
+	// objects.push_back( new Triangle({Vector3D(30, 60, 0), 
+	// 								Vector3D(50, 30, 0), Vector3D(50, 45, 50)},
+	// 								{0.0, 0.0, 1.0}, {0.4, 0.2, 0.1, 0.3}, 5) );
+
+	// objects.push_back( new Quadric(0.0625, 0.04, 0.04, 0, 0, 0, 0, 0, 0, -36, Vector3D(0, 0, 0), 
+	// 	0 ,0 ,15, {1.0, 0.0, 0.0}, {0.4, 0.2, 0.1, 0.3}, 15 ) );
+
+	// lights.push_back( Light(Vector3D(70.0, 70.0, 70.0), {1.0, 0.0, 0.0}) );
+	// lights.push_back( Light(Vector3D(-70, 70, 70), {0.0, 0.0, 1.0}) );
+	// lights.push_back( Light(Vector3D(70, -70, 70), {1, 0, 0.0}));
+	// lights.push_back( Light(Vector3D(-70, -70, 70), {0, 1.0, 0}));
+
+
 }
 
 void capture(){
@@ -91,7 +148,7 @@ void capture(){
 			Ray ray = Ray( eye, cur.add(eye.multiply(-1)).normalize() );
 			double t_min = 1111111;
 			for(int i = 0; i < (int)objects.size(); i++){
-				double t = objects[i]->intersect(ray, col, 1);
+				double t = objects[i]->intersect(ray, col, level);
 				if(t > 0 && t < t_min){
 					t_min = t;
 					for(int i = 0; i < 3; i++){
