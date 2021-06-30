@@ -11,14 +11,12 @@ float stepAngle = 2;
 
 int imageWidth = 768;
 int imageHeight = 768;
+// int imageWidth = 200;
+// int imageHeight = 200;
 
 Vector3D pos, u, r, l;
 
 void initialize(){
-	// objects.push_back( new Floor(1000, 20) );
-	// objects.push_back( new Sphere(Vector3D(40.0, 0.0, 10.0), 10.0, {0.0, 1.0, 0.0}, {0.4, 0.2, 0.2, 0.8}, 10 ) ); 
-	// objects.push_back( new Sphere(Vector3D(-30.0, 60.0, 20.0), 20.0, {0.0, 0.0, 1.0}, {0.2, 0.2, 0.4, 0.8}, 15 ) );
-	// objects.push_back( new Sphere(Vector3D(-15.0, 15.0, 45.0), 15.0, {1.0, 1.0, 0.0}, {0.4, 0.3, 0.1, 0.8}, 5 ) );
 
 	objects.push_back( new Floor(1000, 20) );
 	objects.push_back( new Sphere(Vector3D(40.0, 0.0, 10.0), 10.0, {0.0, 1.0, 0.0}, {0.4, 0.2, 0.2, 0.2}, 10 ) ); 
@@ -41,6 +39,7 @@ void initialize(){
 	lights.push_back( Light(Vector3D(-70, 70, 70), {0.0, 0.0, 1.0}) );
 	lights.push_back( Light(Vector3D(70, -70, 70), {1, 0, 0.0}));
 	lights.push_back( Light(Vector3D(-70, -70, 70), {0, 1.0, 0}));
+
 
 
 
@@ -70,35 +69,36 @@ void capture(){
 
 	Vector3D topLeft = eye.add(look).add(right).add(up);
 
-	// topLeft.print();
-	// eye.print();
-	// l.print();
-	// r.print();
-	// u.print();
-
 	double du = windowWidth/imageWidth;
 	double dv = windowHeight/imageHeight;
 
 	topLeft = topLeft.add(r.multiply(0.5*du)).add( u.multiply( - 0.5*dv) );
 
 	int counter = 0;
+
+	cout << "Started\n";
+	vector<double> col(3, 1);	
 	for(int x = 0; x < imageWidth; x++){
 		for(int y = 0; y < imageHeight; y++){
 			Vector3D cur = topLeft;
 			cur = cur.add(r.multiply(x*du)).add( u.multiply( - y*dv) );
 			Ray ray = Ray( eye, cur.add(eye.multiply(-1)).normalize() );
-			vector<double> col(3, 1);
 			double t_min = 1111111;
 			for(int i = 0; i < (int)objects.size(); i++){
 				double t = objects[i]->intersect(ray, col, 4);
 				if(t > 0 && t < t_min){
 					t_min = t;
+					for(int i = 0; i < 3; i++){
+						col[i] = min(col[i], 1.0);
+					}
 					img[x][y] = {(int)(col[0]*255), (int)(col[1]*255), (int)(col[2]*255)};
 				}
 			}
 			if(t_min < 10000) counter++;
 		}
 	}
+	cout << "finished\n";
+
 	for(int i = 0; i < imageWidth; i++){
 		for(int j = 0; j < imageHeight; j++){
 			image.set_pixel(i,j, img[i][j][0] ,img[i][j][1], img[i][j][2]);

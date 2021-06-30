@@ -23,14 +23,14 @@ public:
 		x = a.x, y = a.y, z = a.z;
 	}
 
-	Vector3D cross(Vector3D a){
+	Vector3D cross(const Vector3D &a){
 		return Vector3D(y*a.z - z*a.y, z*a.x - x*a.z, x*a.y - y*a.x);
 	}
-    double dotProduct(Vector3D a){
+    double dotProduct(const Vector3D &a){
         return x*a.x + y*a.y + z*a.z; 
     }
 
-	Vector3D add(Vector3D a){
+	Vector3D add(const Vector3D &a){
 		return Vector3D(x + a.x, y + a.y, z + a.z);
 	}
 
@@ -38,13 +38,13 @@ public:
 		return Vector3D(val*x, val*y, val*z);
 	}
 
-	void shiftInDirection(Vector3D to, float steps){
+	void shiftInDirection(const Vector3D &to, float steps){
 		x += (to.x)*steps;
 		y += (to.y)*steps;
 		z += (to.z)*steps;
 	}
 
-	void rotate(Vector3D per, float angle){
+	void rotate(const Vector3D &per, float angle){
 		Vector3D t = cross(per);
 		Vector3D m = *this;
 		m = m.multiply(cos(angle*pi/180.0));
@@ -120,11 +120,11 @@ public:
         cout << "Draw method not overriddent\n";
     }
 
-    virtual double intersect(Ray ray, vector<double> &cols, int level){
+    virtual double intersect(Ray &ray, vector<double> &cols, int level){
         return -1;
     }
 
-    void calculateColor(Vector3D point, Vector3D V, Vector3D N, vector<double> &cols, vector<double> color,int level);
+    void calculateColor(Vector3D &point, Vector3D &V, Vector3D &N, vector<double> &cols, vector<double> &color,int level);
 
     void setColor(){
     }
@@ -140,11 +140,11 @@ public:
 vector<Light> lights;
 vector<Object*> objects;
 
-void Object::calculateColor(Vector3D point, Vector3D V, Vector3D N, vector<double> &cols,vector<double> color, int level){
+void Object::calculateColor(Vector3D &point, Vector3D &V, Vector3D &N, vector<double> &cols,vector<double> &color, int level){
     for(int i = 0; i < 3; i++) cols[i] = color[i]*coEfficients[AMB];
 
     for(int i = 0; i < (int)lights.size(); i++){
-        Light light = lights[i];
+        Light &light = lights[i];
         Vector3D L = point.add(light.light_pos.multiply(-1));
         L.normalize();
         Vector3D R = N.multiply( - 2 * L.dotProduct(N)).add( L );
@@ -158,7 +158,6 @@ void Object::calculateColor(Vector3D point, Vector3D V, Vector3D N, vector<doubl
     Vector3D recurDir = N.multiply( -2* N.dotProduct(V) ).add(V).normalize();
 
     Ray recur = Ray(point.add(recurDir.multiply(.001)), recurDir );
-    // Ray recur = Ray(point , recurDir );
 
     vector<double> reColor(3, 0);
     vector<double> colorReflected;
@@ -221,7 +220,7 @@ public:
         }	
     }
 
-    double intersect(Ray ray, vector<double> &cols, int level){
+    double intersect(Ray &ray, vector<double> &cols, int level){
         Vector3D r0 = ray.start.add( reference_point.multiply(-1) );
         Vector3D rd = ray.dir;
         double a = 1;
@@ -254,7 +253,8 @@ class Floor : public Object{
 public:
     Floor(double floorWidth, double tileWidth) 
         : Object(Vector3D(-floorWidth/2, -floorWidth/2, 0), 
-            floorWidth, floorWidth, tileWidth, {0,0,0}, {.5,.2, .2, .2}, 10)
+            // floorWidth, floorWidth, tileWidth, {0,0,0}, {.5,.4, .4, .2}, 3)
+            floorWidth, floorWidth, tileWidth, {0,0,0}, {.5,.5, .5, .25}, 10)
     {}
 
     void draw(){
@@ -278,7 +278,7 @@ public:
         }
     }
 
-    double intersect(Ray ray, vector<double> &cols, int level){
+    double intersect(Ray &ray, vector<double> &cols, int level){
         Vector3D r0 = ray.start;
         Vector3D rd = ray.dir;
         if(rd.z == reference_point.z)
@@ -327,30 +327,58 @@ public:
         }glEnd();
     }
 
-    double intersect(Ray ray, vector<double> &cols, int level){
-        return -1;
-        // Vector3D r0 = ray.start;
-        // Vector3D rd = ray.dir;
-        // if(rd.z == reference_point.z)
-        //     return -1;
-        // double t = - r0.z/rd.z;
-        // Vector3D point = r0.add(rd.multiply(t));
-        // if(point.x >= reference_point.x && point.x <= reference_point.x + width && 
-        //     point.y >= reference_point.y && point.y <= reference_point.y + width )
-        // {
-        //     int u = (point.x - reference_point.x)/length;
-        //     int v = (point.y - reference_point.y)/length;
-        //     int parity = (u + v)%2;
-        //     vector<double> color = {(double)parity, (double)parity, (double)parity};
-        //     if(level == 0)
-        //         return t;
+    double determinant(double mat[][3]){
+        return mat[0][0]*(mat[1][1]*mat[2][2] - mat[2][1]*mat[1][2]) -
+                mat[0][1]*(mat[1][0]*mat[2][2] - mat[1][2]*mat[2][0]) +
+                mat[0][2]*(mat[1][0]*mat[2][1] - mat[1][1]*mat[2][0]);
+    }
 
-        //     Vector3D N = Vector3D(0, 0, 1);
-        //     N.normalize();
-        //     Vector3D V = rd;
-        //     calculateColor(point, V, N, cols, color, level );
-        //     return t;
-        // }
-        // return -1;
+    double intersect(Ray &ray, vector<double> &cols, int level){
+        Vector3D p0 = ray.start.add(points[0].multiply(-1));
+        Vector3D v1 = points[1].add(points[0].multiply(-1));
+        Vector3D v2 = points[2].add(points[0].multiply(-1));
+        Vector3D v3 = ray.dir.multiply(-1);
+        // vector<vector<double>> dt = vector<vector<double>>(3, vector<double>(3, 0)), a1, a2, a3;
+        double dt [3][3], a1[3][3], a2[3][3], a3[3][3];
+
+
+        dt[0][0] = v1.x, dt[0][1] = v2.x, dt[0][2] = v3.x;
+        dt[1][0] = v1.y, dt[1][1] = v2.y, dt[1][2] = v3.y;
+        dt[2][0] = v1.z, dt[2][1] = v2.z, dt[2][2] = v3.z;
+
+        for(int i = 0; i < 3; i++){
+            for(int j = 0; j < 3; j++){
+                a1[i][j] = a2[i][j] = a3[i][j] = dt[i][j];  
+            }
+        }
+
+        a1[0][0] = p0.x, a1[1][0] = p0.y, a1[2][0] = p0.z;
+        a2[0][1] = p0.x, a2[1][1] = p0.y, a2[2][1] = p0.z;
+        a3[0][2] = p0.x, a3[1][2] = p0.y, a3[2][2] = p0.z;
+        double Ddt = determinant(dt), 
+                Da1 = determinant(a1), Da2 = determinant(a2), Da3 = determinant(a3);
+        if(fabs(Ddt) < .0000001){
+            return -1;
+        }
+        double alpha = Da1/Ddt, beta = Da2/Ddt, t = Da3/Ddt;
+        Vector3D point = ray.start.add(ray.dir.multiply(t));
+        if(!(alpha >= 0 && alpha <= 1 && beta >= 0 && beta <= 1 && alpha + beta <= 1)){
+            return -1;
+        }
+
+        if(level == 0){
+            return t;
+        }
+        Vector3D N = v1.cross(v2);
+        if(ray.dir.dotProduct(N) > 0){
+            N = N.multiply(-1);
+        }
+        N.normalize();
+        Vector3D V = ray.dir;
+
+        calculateColor(point, V, N, cols, color,level);
+        
+        return t;
+
     }
 };
